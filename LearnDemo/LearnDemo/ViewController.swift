@@ -62,6 +62,7 @@ class ViewController: UIViewController {
         self.view.backgroundColor = .white
 
         testLeetCode()
+        return;
         
         OneViewCtrl.testaa()
         

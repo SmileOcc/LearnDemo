@@ -35,6 +35,17 @@ class LeetCodeCtrl: UIViewController {
         return resultNode ?? ListNode()
     }
     
+    class func inputNodelList(_ nodel:ListNode?) -> String {
+        guard let nodel = nodel else {return ""}
+        var str = "\(nodel.val)"
+        var currentNodel = nodel.next
+        while currentNodel != nil {
+            str += "\(currentNodel!.val)"
+            currentNodel = currentNodel?.next
+        }
+        return str
+    }
+    
     class func test() {
         let tesSoulL = Solution()
 
@@ -91,6 +102,16 @@ class LeetCodeCtrl: UIViewController {
 
         print("====最后一个单词：\(tesSoulL.lengthOfLastWord2("abc 123 "))")
         
+        var colors = [2,1,0,1,2,0,2,1]
+        print("====颜色分类: \(tesSoulL.sortColors(&colors))")
+        
+        print("====链表分割：\(inputNodelList(tesSoulL.partition(createNodeList([1,4,3,2,5,2]), 3)))")
+        print("====链表局部翻转: \(inputNodelList(tesSoulL.reverseBetween(createNodeList([1,2,3,4,5]), 2, 4)))")
+        print("====链表局部翻转: \(inputNodelList(tesSoulL.reverseBetween(createNodeList([1,2,3,4,5]), 2, 5)))")
+        print("====链表局部翻转: \(inputNodelList(tesSoulL.reverseBetween(createNodeList([1,2,3,4,5]), 2, 9)))")
+        print("====链表局部翻转: \(inputNodelList(tesSoulL.reverseBetween(createNodeList([1,2,3,4,5]), 0, 9)))")
+        print("====链表局部翻转: \(inputNodelList(tesSoulL.reverseBetween(createNodeList([1,2,3,4,5]), 0, 5)))")
+  
 
     }
     
@@ -2577,7 +2598,179 @@ class Solution {
         return "/" + result.joined(separator: "/")
     }
     
+    //MARK: 72. 编辑距离
+    /*
+     给你两个单词 word1 和 word2， 请返回将 word1 转换成 word2 所使用的最少操作数  。
 
+     你可以对一个单词进行如下三种操作：
+
+     插入一个字符
+     删除一个字符
+     替换一个字符
+      
+
+     示例 1：
+
+     输入：word1 = "horse", word2 = "ros"
+     输出：3
+     解释：
+     horse -> rorse (将 'h' 替换为 'r')
+     rorse -> rose (删除 'r')
+     rose -> ros (删除 'e')
+     
+     解题思路
+
+     我们 定义
+
+     dp 为 row = cword1.count+1) , col = (word2.count+1) 的二维数组。
+
+     所以 dp[i][j] 是 word1[0,i) 转换成 word2[0,j) 所需要的最少操作数
+
+     左闭右开的区间，代表 前 k 个字符。
+
+     那么 dp[word1.count][word2.count] 就是我们要的结果。
+
+     1. 初始状态
+
+     dp[0][0],也就是两个空串转化的最少操作数，因为不需要任何操作，所以 dp[0][0] = 0
+
+     dp[i][0],表示 第 0 列，也就是 将 word1(0,i) 转换为 word2 的空子串的最少操作数，很明显，就是删除操作，于是 dp[i][0] = i
+
+     同理，dp[0][j] = j
+
+     2. 转移方程
+
+     求解 dp[i][j]， 的时候，即 求 word1[0,i) 转换成 word2[0,j) 所需要的最少操作数 ，我们可以尝试根据之前的结果, 通过删除，插入，替换 来推导。
+
+     删除 word1[0,i) 的最后一个字符, 得到 word1[0,i-1)，于是我们需要求解 word1[0,i-1) 转为 word2[0,j) 的步骤。 公式为 dp[i][j] = 1 + dp[i-1][j]
+
+     先由 word1[0,j) 转为 word2[0,j-1) ,然后我们 插入 一个字符，得到 word2[0,j)。 公式为 dp[i][j] = dp[i][j-1] + 1
+
+     如果当前字符不相等，即 word1[i-1] != word2[j-1], 我们可以 先求 word1[0,i-1) 转换 为 **word2[0,j-1)**的最少步数，然后我们对最后一个字符进行 替换 操作, 让 字符 word1[i-1] 变成字符 word2[j-1] 。公式 为 dp[i][j] = dp[i-1][j-1] + 1
+
+     如果 当前字符是相等的， 即 word1[i-1] == word2[j-1],根据 前面的分析，我们只需要求得 word1[0,i-1) 转换 为 **word2[0,j-1)**的最少步数即可，最后一个字符串不需要操作，公式 为 dp[i][j] = dp[i-1][j-1]
+
+     如果绘制二维数组，以 word1 为 row， 以 word2 为 col, 那么很明显可以看到，当前结果 是由 左边，上边 和 左上角，三个方向推导而来。
+
+     */
+    
+    func minDistance(_ word1: String, _ word2: String) -> Int {
+        if word1.count == 0 || word2.count == 0 {
+            return word1.count + word2.count
+        }
+        
+        let arrayWord1 = Array(word1)
+        let arrayWord2 = Array(word2)
+        
+        let row = arrayWord1.count+1
+        let col = arrayWord2.count+1
+        
+        var dp:[[Int]] = [[Int]](repeating: [Int](repeating: 0, count: col), count: row)
+        
+        //! 第 0 列
+        for i in 0..<row {
+            dp[i][0] = i
+        }
+        
+        //! 第 0 行
+        for j in 0..<col {
+            dp[0][j] = j
+        }
+        
+        for i in 1..<row{
+            for j in 1..<col {
+                let left = dp[i][j-1] + 1
+                let top = dp[i-1][j] + 1
+                var leftTop = dp[i-1][j-1]
+                if arrayWord1[i-1] != arrayWord2[j-1] {
+                    leftTop += 1
+                }
+                dp[i][j] = min(left, top, leftTop)
+                
+            }
+        }
+        
+        return dp[row-1][col-1]
+        
+    }
+    
+    //MARK: 75. 颜色分类  可以
+    
+    /*
+     给定一个包含红色、白色和蓝色、共 n 个元素的数组 nums ，原地对它们进行排序，使得相同颜色的元素相邻，并按照红色、白色、蓝色顺序排列。
+
+     我们使用整数 0、 1 和 2 分别表示红色、白色和蓝色。
+
+     必须在不使用库内置的 sort 函数的情况下解决这个问题。
+
+     示例 1：
+
+     输入：nums = [2,0,2,1,1,0]
+     输出：[0,0,1,1,2,2]
+     示例 2：
+
+     输入：nums = [2,0,1]
+     输出：[0,1,2]
+     */
+
+    func sortColors2(_ nums: inout [Int]) {
+        var p0 = 0, p1 = 0
+        for i in 0..<nums.count {
+            if nums[i] == 0 {
+                (nums[i], nums[p0]) = (nums[p0], nums[i])
+                p0 += 1
+            }
+            if nums[i] == 1 {
+                (nums[i], nums[p1]) = (nums[p1], nums[i])
+                p1 += 1
+            }
+            if p1<p0 {
+                p1 = p0
+            }
+        }
+    }
+    
+    // 双指针解法:
+    // p0表示指向的是0位置的下标, 初始值为0
+    // p2表示指向的是2位置的下标, 初始值为nums.lenth-1
+    // 遍历每个元素, 遇到0元素, 和p0交换,p0++, 遇到1,跳过, 遇到2,和p2位置元素交换; p2--
+    // 循环条件 i <= p2
+
+    func sortColors(_ nums: inout [Int]) {
+        if nums.count < 2 { return }
+        
+//        func swap(_ nums: inout [Int], i: Int, j: Int) {
+//            let tmp = nums[i]
+//            nums[i] = nums[j]
+//            nums[j] = tmp
+//        }
+        
+        var p0 = 0
+        var p2 = nums.count-1
+        var i = 0
+        while i <= p2 {
+            if nums[i] == 0 {
+//                swap(&nums, i: i, j: p0)
+                (nums[i], nums[p0]) = (nums[p0], nums[i])
+
+                p0 += 1
+                i += 1
+            } else if nums[i] == 1 {
+                i += 1
+            } else {//2
+//                swap(&nums, i: i, j: p2)
+                (nums[i], nums[p2]) = (nums[p2], nums[i])
+
+                p2 -= 1
+            }
+        }
+    }
+        
+
+
+    
+    
+    
     //MARK: 76. 最小覆盖子串 ###
     
     /*
@@ -2643,69 +2836,58 @@ class Solution {
     }
     
     
-    func minWindowxx(_ s: String, _ t: String) -> String {
-        //这个错误
-        if t.count > s.count {return ""}
-        
-        
-        var result = ""
-        
-        //这个两个都可以从 map 里面取
-        var left = 0
-        var startValue = ""
-        
-        var minLength = Int.max
-        //记录对应每个有些的字母的起始位置，及后续对应拼接内容
-        var mapDic = [Int:(Int,String,String)]()
-        
-        for (i,value) in s.enumerated() {
-            if t.contains(value) && startValue == "" {
-                left = i
-                startValue = String(value)
-                mapDic[0] = (i,startValue,startValue)
-                
-            } else if t.contains(value) && String(value) == startValue {
-                left = i
-                startValue = String(value)
-                mapDic[0] = (i,startValue,startValue)
-                mapDic[1] = nil
+    //MARK: 77. 组合
+    
+    /*给定两个整数 n 和 k，返回范围 [1, n] 中所有可能的 k 个数的组合。
+     
+     你可以按 任何顺序 返回答案。
 
-            } else if t.contains(value) {
-                
-                mapDic[0]?.2.append(value)
+      
 
-                if mapDic[1] == nil {
-                    mapDic[1] = (i,String(value),String(value))
-                    
-                } else if let secValue = mapDic[1], secValue.1 == String(value) {
-                    mapDic[1] = (i,String(value),String(value))
-                } else {
-                    mapDic[1]?.2.append(value)
-                    
-                    if minLength > i - left + 1 { //最小直大于后面的，替换
-                        result = mapDic[0]!.2
-                        minLength = i - left + 1
-                    }
-                    
-                    
-                    mapDic[0] = mapDic[1]
-                    mapDic[1] = (i,String(value),String(value))
-                    left = mapDic[0]?.0 ?? 0
-                    startValue = mapDic[0]?.1 ?? ""
-                    
-                }
-                
-            } else {
-                if startValue.count > 0 {
-                    
-                    mapDic[0]?.2.append(value)
-                    mapDic[1]?.2.append(value)
+     示例 1：
 
-                }
+     输入：n = 4, k = 2
+     输出：
+     [
+       [2,4],
+       [3,4],
+       [2,3],
+       [1,2],
+       [1,3],
+       [1,4],
+     ]
+     */
+    
+    
+    //回朔算法 + 剪枝
+    func combine(_ n: Int, _ k: Int) -> [[Int]] {
+        var res = [[Int]]()
+        
+        if n < k {
+            return [[]]
+        }
+        
+        func helper(_ k: Int, _ begin: Int, _ list: [Int], _ path: [Int]) {
+            if path.count == k {
+                res.append(path)
+                return
+            }
+            
+            for index in begin..<list.count {
+                let currentNum = list[index]
+                helper(k, index + 1, list, path + [currentNum])
             }
         }
         
-        return result
+        
+        var nums = [Int]()
+        for i in 1...n {
+            nums.append(i)
+        }
+        
+        helper(k, 0, nums, [])
+        return res
+        
     }
     
     
@@ -2844,6 +3026,244 @@ class Solution {
             }
         }
         return false
+    }
+    
+    //MARK: 80. 删除有序数组中的重复项 II
+
+    /*给你一个有序数组 nums ，请你 原地 删除重复出现的元素，使得出现次数超过两次的元素只出现两次 ，返回删除后数组的新长度。
+     不要使用额外的数组空间，你必须在 原地 修改输入数组 并在使用 O(1) 额外空间的条件下完成。
+     */
+    func removeDuplicatesII(_ nums: inout [Int]) -> Int {
+        
+        var i = 0
+        for item in nums {
+            if i < 2 || item > nums[i - 2] {
+                nums[i] = item
+                i += 1
+            }
+        }
+        nums[i...] = []
+        return i
+    }
+    
+    //快慢指针
+    func removeDuplicatesII2(_ nums: inout [Int]) -> Int {
+        // 特判
+        if nums.count == 0 {
+            return 0
+        }
+        
+        var slow: Int = 0
+        var quick: Int = 1
+        
+        // 记录连续重复次数
+        var duplicateCount: Int = 0
+        
+        while quick < nums.count {
+            if nums[slow] == nums[quick] {
+                duplicateCount += 1
+                // 没有超过2个的时候，都是有效元素。
+                // 超过2个重复之后，此时slow指向元素后面的为无效元素，将slow指针待定，后面的无效元素可以直接被后续有效元素覆盖
+                if duplicateCount < 2 {
+                    slow += 1
+                    nums[slow] = nums[quick]
+                }
+            } else {
+                // 发现新元素，将slow指向无效元素。用quick指向的有效元素进行覆盖
+                slow += 1
+                nums[slow] = nums[quick]
+                duplicateCount = 0
+            }
+            quick += 1
+        }
+        return slow + 1
+    }
+
+
+    func removeDuplicatesII3(_ nums: inout [Int]) -> Int {
+        let length = nums.count
+        if length < 3 { return length }
+        var slow = 2, fast = 2 // 定义 0..<slow 为满足题意的区间
+        while fast < length {
+            // 重点是理解这里的 slow 的含义
+            // slow 代表一个坑位，我们要确保 nums[slow-2] != nums[slow]
+            // 那我们就需要找到每一个与 nums[slow-2] 不同的值填入 nums[slow]
+            if nums[fast] != nums[slow - 2] {
+                nums[slow] = nums[fast]
+                slow += 1
+            }
+            fast += 1
+        }
+        return slow
+    }
+    
+    
+    
+    //MARK: 86. 分隔链表
+    /*
+     给你一个链表的头节点 head 和一个特定值 x ，请你对链表进行分隔，使得所有 小于 x 的节点都出现在 大于或等于 x 的节点之前。
+
+     你应当 保留 两个分区中每个节点的初始相对位置。
+     输入：head = [1,4,3,2,5,2], x = 3
+     输出：[1,2,2,4,3,5]
+     */
+    
+    func partition(_ head: ListNode?, _ x: Int) -> ListNode? {
+        if head == nil {
+            return nil
+        }
+        
+        var currentNode = head
+        let minHead = ListNode(0)
+        var minNode = minHead
+        
+        let maxHead = ListNode(0)
+        var maxNode = maxHead
+        
+        while currentNode != nil {
+            
+            if currentNode!.val < x {
+                minNode.next = currentNode
+                minNode = currentNode!
+            } else {
+                maxNode.next = currentNode
+                maxNode = currentNode!
+            }
+            
+            currentNode = currentNode?.next
+        }
+        
+        maxNode.next = nil
+        minNode.next = maxHead.next
+        
+        return minHead.next
+    }
+    
+    //MARK: 92. 反转链表 II
+    /*
+     给你单链表的头指针 head 和两个整数 left 和 right ，其中 left <= right 。请你反转从位置 left 到位置 right 的链表节点，返回 反转后的链表 。
+     输入：head = [1,2,3,4,5], left = 2, right = 4
+     输出：[1,4,3,2,5]
+     输入：head = [5], left = 1, right = 1
+     输出：[5]
+     */
+    
+    func reverseBetween(_ head: ListNode?, _ left: Int, _ right: Int) -> ListNode? {
+        
+        func reverse(_ node:ListNode?) -> ListNode? {
+            var newHead : ListNode? = nil
+            var currentNode = node
+            
+            while currentNode != nil {
+                let temp = currentNode?.next
+                currentNode?.next = newHead
+                newHead = currentNode
+                currentNode = temp
+            }
+            
+            return newHead
+        }
+        
+        var newHead : ListNode? = nil
+        var prev : ListNode? = nil
+        var leftNode = head
+        var rightNode = head
+        
+        //寻找 left 节点 和  right 节点
+        var step = 1
+        while rightNode != nil && step < right {
+            rightNode = rightNode?.next
+            if step < left {
+                prev = leftNode
+                leftNode = leftNode?.next
+            }
+            step += 1
+        }
+        
+        //断开链表
+        let tempRightNext = rightNode?.next
+        rightNode?.next = nil
+        
+        //反转链表
+        let reverseNode = reverse(leftNode)
+        
+        //链接链表
+        leftNode?.next = tempRightNext
+        
+        //处理头节点指针
+        if prev == nil {
+            newHead = reverseNode
+        } else {
+            newHead = head
+            prev?.next = reverseNode
+        }
+        
+        return newHead
+    }
+
+    
+
+    //自己写的
+    func reverseBetween22(_ head: ListNode?, _ left: Int, _ right: Int) -> ListNode? {
+        
+        guard let headNode = head else {return nil}
+        let left = left <= 0 ? 1 : left
+        let right = right >= left ? right : left
+
+        
+        var currentNode:ListNode? = headNode
+        
+        var resultNode:ListNode? = headNode
+        // 中间翻转最左边起点之前的 （用于最后拼接 翻转后的链表）
+        var leftNode:ListNode?
+        // 中间翻转的最右端 （用于最后拼接 后续正常的）
+        var rightNode:ListNode?
+        var reversStartNode:ListNode? = nil
+        
+        var tempNodel:ListNode?
+        
+        var flag = true
+        var index = 1
+        
+        while flag {
+        
+            tempNodel = currentNode?.next
+            if left <= index {
+                
+                currentNode!.next = reversStartNode
+                if reversStartNode == nil {
+                    //记录翻转后最后的 节点
+                    rightNode = currentNode
+                }
+                reversStartNode = currentNode!
+
+            } else if reversStartNode == nil {
+                //记录开始翻转前最后正常的 节点
+                leftNode = currentNode
+            }
+            
+            //结束之前 翻转最后节点 + 拼接后续正常的
+            if right == index {
+                flag = false
+                rightNode?.next = tempNodel
+            } else if tempNodel == nil {
+                flag = false
+            }
+            
+            
+            if tempNodel != nil {
+                index += 1
+                currentNode = tempNodel
+            }
+            
+        }
+        
+        if leftNode != nil {
+            leftNode?.next = reversStartNode
+        } else {
+            resultNode = reversStartNode
+        }
+        return resultNode
     }
     
     //MARK: 100. 相同的树
